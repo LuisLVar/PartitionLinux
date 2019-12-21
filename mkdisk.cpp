@@ -41,7 +41,6 @@ void mkDisk::crearDisco(string size, string unit, string path)
     Structs::MBR disco;
     disco.size = numSize;
     strcpy(disco.date, fechayhora);
-    //disco.fit = toupper(fit[0]);
     disco.disk_signature = rand() % 100;
 
     FILE *validar = fopen(path.c_str(), "r");

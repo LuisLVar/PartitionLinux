@@ -170,6 +170,7 @@ void fDisk::createPartition(string size, string unit, string name, string path, 
             {
                 cout << "Error: ya existe una particion extendida, no puedes crear otra." << endl;
                 tamanioPasado = true;
+                return;
             }
         }
         else
@@ -253,10 +254,12 @@ void fDisk::createPartition(string size, string unit, string name, string path, 
         if (discoLLeno)
         {
             cout << "Error: numero de particiones maximas creadas." << endl;
+            return;
         }
         else
         {
             cout << "Error: tamanio de la particion sobre pasa el disco." << endl;
+            return;
         }
     }
 }

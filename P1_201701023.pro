@@ -15,7 +15,12 @@ SOURCES += main.cpp \
     rmdisk.cpp \
     structs.cpp \
     fdisk.cpp \
-    mount.cpp
+    mount.cpp \
+    mkfs.cpp \
+    carpeta.cpp \
+    archivo.cpp \
+    rep.cpp \
+    recovery.cpp
 
 # The following define makes your compiler emit warnings if you use
 # any feature of Qt which as been marked deprecated (the exact warnings
@@ -34,4 +39,9 @@ HEADERS += \
     rmdisk.h \
     structs.h \
     fdisk.h \
-    mount.h
+    mount.h \
+    mkfs.h \
+    carpeta.h \
+    archivo.h \
+    rep.h \
+    recovery.h

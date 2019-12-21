@@ -3,6 +3,10 @@
 #include "rmdisk.h"
 #include "fdisk.h"
 #include "rep.h"
+#include "mkfs.h"
+#include "carpeta.h"
+#include "archivo.h"
+#include "recovery.h"
 
 Interprete::Interprete()
 {
@@ -108,17 +112,17 @@ void Interprete::ejecutarComando(vector<string> commandArray)
     }
     else if (data == "fdisk")
     {
-        Interprete::ffDisk(commandArray); //PENDIENTE
+        Interprete::ffDisk(commandArray); //DONE
 //        cout << "Entro fdisk" << endl;
     }
     else if (data == "mount")
     {
-        Interprete::fmount(commandArray); //PENDIENTE
+        Interprete::fmount(commandArray); //DONE
 //        cout << "Entro mount" << endl;
     }
     else if (data == "unmount")
     {
-        Interprete::funmount(commandArray); //PENDIENTE
+        Interprete::funmount(commandArray); //DONE
 //        cout << "Entro unmount" << endl;
     }
     else if (data == "rep")
@@ -129,6 +133,54 @@ void Interprete::ejecutarComando(vector<string> commandArray)
     else if (data == "pause")
     {
         Interprete::fpause(); //DONE
+    }
+    else if (data == "mkfs")
+    {
+        Interprete::fmkfs(commandArray); //PENDIENTE
+    }
+    else if (data == "mkfile")
+    {
+        Interprete::fmkfile(commandArray); //PENDIENTE
+    }
+    else if (data == "cat")
+    {
+        Interprete::fcat(commandArray); //PENDIENTE
+    }
+    else if (data == "rm")
+    {
+        Interprete::frem(commandArray); //PENDIENTE
+    }
+    else if (data == "edit")
+    {
+        Interprete::fedit(commandArray); //PENDIENTE
+    }
+    else if (data == "ren")
+    {
+        Interprete::fren(commandArray); //PENDIENTE
+    }
+    else if (data == "mkdir")
+    {
+        Interprete::fmkdir(commandArray); //PENDIENTE
+    }
+    else if (data == "cp")
+    {
+        Interprete::fcp(commandArray); //PENDIENTE
+    }
+    else if (data == "mv")
+    {
+        Interprete::fmv(commandArray); //PENDIENTE
+    }
+    else if (data == "find")
+    {
+        Interprete::ffind(commandArray); //PENDIENTE
+    }
+    else if (data == "recovery")
+    {
+        Interprete::frecovery(commandArray); //PENDIENTE
+    }
+    else if (data == "loss")
+    {
+        Interprete::floss(commandArray); //PENDIENTE
     }
     else
     {
@@ -326,6 +378,7 @@ void Interprete::frep(vector<string> commandArray)
     string name = "";
     string path = "";
     string id = "";
+    string ruta = "";
     for (int i = 0; i < commandArray.size(); i++)
     {
         string comando = Interprete::toLowerCase(commandArray[i].substr(1, 4));
@@ -340,7 +393,7 @@ void Interprete::frep(vector<string> commandArray)
         }
         else if (comando == "path")
         {
-            if (commandArray[i].substr(6, 1) != "\"")
+            if (commandArray[i].substr(7, 1) != "\"")
             {
                 path = Interprete::getAtributo(commandArray[i]);
             }
@@ -349,9 +402,20 @@ void Interprete::frep(vector<string> commandArray)
                 path = Interprete::getFullPath(commandArray, i);
             }
         }
+        else if (comando == "ruta")
+        {
+            if (commandArray[i].substr(7, 1) != "\"")
+            {
+                ruta = Interprete::getAtributo(commandArray[i]);
+            }
+            else
+            {
+                ruta = Interprete::getFullPath(commandArray, i);
+            }
+        }
     }
-    //Rep reporte;
-    Interprete::crearReporte(path, toLowerCase(name), toLowerCase(id));
+    Rep reporte;
+    reporte.crearReporte(path, toLowerCase(name), toLowerCase(id), montaje, ruta);
 }
 
 
@@ -470,298 +534,28 @@ string Interprete::getFullPath(vector<string> commandArray, int j)
     return path;
 }
 
-
-void Interprete::crearReporte(string path, string name, string id)
+string Interprete::getFullDest(vector<string> commandArray, int j)
 {
-    char letra = id.c_str()[2];
-    char numero = id.c_str()[3];
-    bool existePath = false;
-    int numeroInt = (int)numero - 48;
-
-    char pathDisco[100] = "";
-    Mount montaje2 = montaje;
-
-    for (int i = 0; i < 26; i++)
+    string path = commandArray[j].substr(10, commandArray[j].size() - 5);
+    for (int i = j + 1; i < commandArray.size(); i++)
     {
-        if (montaje.discos[i].letra == letra && montaje.discos[i].particiones[numeroInt-1].estado == 1)
+        if (commandArray[i].substr(0, 1) != "&")
         {
-            strcpy(pathDisco, montaje.discos[i].path);
-            existePath = true;
+            path = path + " " + commandArray[i];
+        }
+        else
+        {
             break;
         }
     }
-
-    if (!existePath)
+    if (path.substr(path.size() - 1, 1) == " ")
     {
-        cout << "Error: id no existe, path no existente." << endl;
-        return;
+        path = path.substr(0, path.size() - 1);
     }
 
-    Structs::MBR discoEditar;
-    FILE *bfile2 = fopen(pathDisco, "rb+");
-    if (bfile2 != NULL)
-    {
-        rewind(bfile2);
-        fread(&discoEditar, sizeof(discoEditar), 1, bfile2);
-    }
-    else
-    {
-        cout << "Error. Path no existente, disco no existente." << endl;
-        return;
-    }
-    fclose(bfile2);
+    path.erase(remove(path.begin(), path.end(), '\"'), path.end());
 
-    if (name == "mbr")
-    {
-        string codigoInterno = "";
-        string size = to_string(discoEditar.size);
-        string date(discoEditar.date);
-        string firma = to_string(discoEditar.disk_signature);
-        string fit = "";
-        //fit.push_back(discoEditar.fit);
-
-        codigoInterno = "<TR>\n"
-                        "<TD><B>MBR_Tamanio</B></TD>\n"
-                        "<TD>" +
-                        size + "</TD>\n"
-                               "</TR>\n"
-                               "<TR>\n"
-                               "<TD><B>MBR_Fecha_Creacion</B></TD>\n"
-                               "<TD>" +
-                        date + "</TD>\n"
-                               "</TR>\n"
-                               "<TR>\n"
-                               "<TD><B>MBR_Disk_Signature</B></TD>\n"
-                               "<TD>" +
-                        firma + "</TD>\n"
-                                "</TR>\n"
-                                "<TR>\n"
-                                "<TD><B>MBR_Disk_Fit</B></TD>\n"
-                                "<TD>" +
-                        fit + "</TD>\n"
-                              "</TR>\n";
-
-        string codigoParticiones = "";
-        for (int i = 0; i < 4; i++)
-        {
-            if (discoEditar.mbr_particiones[i].Estado == '1')
-            {
-                string size = to_string(discoEditar.mbr_particiones[i].size);
-                string name(discoEditar.mbr_particiones[i].name);
-                string Estado = "";
-                Estado.push_back(discoEditar.mbr_particiones[i].Estado);
-                string fit = "";
-                fit.push_back(discoEditar.mbr_particiones[i].fit);
-                string type = "";
-                type.push_back(discoEditar.mbr_particiones[i].type);
-                string part_start = to_string(discoEditar.mbr_particiones[i].part_start);
-                string indice = to_string((i + 1));
-
-                codigoParticiones = codigoParticiones +
-                                    "<TR>\n"
-                                    "<TD><B>part_Estado_" +
-                                    indice + "</B></TD>\n"
-                                             "<TD>" +
-                                    Estado + "</TD>\n"
-                                             "</TR>\n"
-                                             "<TR>\n"
-                                             "<TD><B>part_Type_" +
-                                    indice + "</B></TD>\n"
-                                             "<TD>" +
-                                    type + "</TD>\n"
-                                           "</TR>\n"
-                                           "<TR>\n"
-                                           "<TD><B>part_Fit_" +
-                                    indice + "</B></TD>\n"
-                                             "<TD>" +
-                                    fit + "</TD>\n"
-                                          "</TR>\n"
-                                          "<TR>\n"
-                                          "<TD><B>part_Start_" +
-                                    indice + "</B></TD>\n"
-                                             "<TD>" +
-                                    part_start + "</TD>\n"
-                                                 "</TR>\n"
-                                                 "<TR>\n"
-                                                 "<TD><B>part_Name_" +
-                                    indice + "</B></TD>\n"
-                                             "<TD>" +
-                                    name + "</TD>\n"
-                                           "</TR>\n";
-            }
-        }
-
-        string codigo = "digraph  {\n"
-                        "graph[ratio = fill];\n"
-                        " node [label=\"\N\", fontsize=15, shape=plaintext];\n"
-                        "graph [bb=\"0,0,352,154\"];\n"
-                        "arset [label=<\n"
-                        " <TABLE ALIGN=\"LEFT\">\n"
-                        "<TR>\n"
-                        " <TD><B>Nombre</B></TD>\n"
-                        "<TD><B> Valor </B></TD>\n"
-                        "</TR>\n" +
-                        codigoInterno +
-                        codigoParticiones +
-                        "</TABLE>\n"
-                        ">, ];\n"
-                        "}";
-
-        string path1 = path;
-        string pathPng = path1.substr(0, path1.size() - 4);
-        pathPng = pathPng + ".png";
-
-        FILE *validar = fopen(path1.c_str(), "r");
-        if (validar != NULL)
-        {
-            std::ofstream outfile(path1);
-            outfile << codigo.c_str() << endl;
-            outfile.close();
-            string comando = "dot -Tpng " + path1 + " -o " + pathPng;
-
-            system(comando.c_str());
-            fclose(validar);
-        }
-        else
-        {
-            string comando1 = "mkdir -p \"" + path + "\"";
-            string comando2 = "rmdir \"" + path + "\"";
-            system(comando1.c_str());
-            system(comando2.c_str());
-
-            std::ofstream outfile(path1);
-            outfile << codigo.c_str() << endl;
-            outfile.close();
-            string comando = "dot -Tpng " + path1 + " -o " + pathPng;
-            system(comando.c_str());
-        }
-    }
-    else if (name == "disk")
-    {
-        string codigoInterno = "";
-        string size = to_string(discoEditar.size);
-        string date(discoEditar.date);
-        string firma = to_string(discoEditar.disk_signature);
-        string fit = "";
-        //fit.push_back(discoEditar.fit);
-        int acumulado = 0;
-
-        string codigoParticiones = "";
-        string codigoLogicas = "";
-        for (int i = 0; i < 4; i++)
-        {
-            if (discoEditar.mbr_particiones[i].Estado == '1')
-            {
-                string name(discoEditar.mbr_particiones[i].name);
-                string Estado = "";
-                Estado.push_back(discoEditar.mbr_particiones[i].Estado);
-                string type = "";
-                type.push_back(discoEditar.mbr_particiones[i].type);
-                int porcentaje = ((discoEditar.mbr_particiones[i].size * 100) / discoEditar.size);
-                acumulado = acumulado + porcentaje;
-                string porcentajeString = to_string(porcentaje);
-
-                if (type == "P")
-                {
-                    codigoParticiones = codigoParticiones +
-                                        "<TD>    <TABLE BORDER=\"0\">\n"
-                                        "<TR><TD>" +
-                                        name + " (" + type + ")"
-                                                             "</TD></TR>\n"
-                                                             "<TR><TD>" +
-                                        porcentajeString + "%</TD></TR>\n"
-                                                           "</TABLE>\n"
-                                                           "</TD>\n";
-                }
-                else if (type == "E")
-                {
-                    int inicioLogicas = discoEditar.mbr_particiones[i].part_start;
-                    Structs::EBR logicaI;
-                    FILE *bfilel = fopen(pathDisco, "rb+");
-                    fseek(bfilel, inicioLogicas, SEEK_SET);
-                    fread(&logicaI, sizeof(Structs::EBR), 1, bfilel);
-                    while(logicaI.part_next != -1){
-                        if(logicaI.Estado != '0'){
-                            codigoLogicas = codigoLogicas + "<TD> Logica: "+logicaI.name+"</TD>\n <TD>EBR</TD>/n";
-                        }
-                        fseek(bfilel, logicaI.part_next, SEEK_SET);
-                        fread(&logicaI, sizeof(Structs::EBR), 1, bfilel);
-                    }
-                    fclose(bfilel);
-
-
-                    codigoParticiones = codigoParticiones +
-                                        "<TD> <TABLE BORDER=\"1\">\n"
-                                                                 "<TR><TD>"+name+ " (EXTENDIDA) -- "+porcentajeString+"% --</TD></TR>\n"
-                                                                 "<TR><TD><TABLE ALIGN=\"LEFT\">\n"
-                                                                 "<TR>\n"
-                                                                 "<TD>EBR</TD>\n" + codigoLogicas +
-                                                                 "</TR></TABLE></TD></TR>\n"
-                                                                 "</TABLE></TD>\n";
-                }
-            }
-        }
-        codigoLogicas = "";
-        int libre = 100 - acumulado;
-        string libreString = to_string(libre);
-        if(acumulado<100){
-                    codigoParticiones = codigoParticiones +
-                                        "<TD>    <TABLE BORDER=\"0\">\n"
-                                        "<TR><TD> Libre "
-                                                             "</TD></TR>\n"
-                                                             "<TR><TD>" +libreString + "%</TD></TR>\n"
-                                                           "</TABLE>\n"
-                                                           "</TD>\n";
-
-        }
-
-        string codigo = "digraph  {\n"
-                        "graph[ratio = fill];\n"
-                        " node [label=\"\N\", fontsize=15, shape=plaintext];\n"
-                        "graph [bb=\"0,0,352,154\"];\n"
-                        "arset [label=<\n"
-                        " <TABLE ALIGN=\"LEFT\">\n"
-                        "<TR>\n"
-                        "<TD>MBR</TD>\n" +
-                        codigoParticiones +
-                        "</TR>\n" +
-                        "</TABLE>\n"
-                        ">, ];\n"
-                        "}";
-
-        string path1 = path;
-        string pathPng = path1.substr(0, path1.size() - 4);
-        pathPng = pathPng + ".png";
-
-        FILE *validar = fopen(path1.c_str(), "r");
-        if (validar != NULL)
-        {
-            std::ofstream outfile(path1);
-            outfile << codigo.c_str() << endl;
-            outfile.close();
-            string comando = "dot -Tpng " + path1 + " -o " + pathPng;
-
-            system(comando.c_str());
-            fclose(validar);
-        }
-        else
-        {
-            string comando1 = "mkdir -p \"" + path + "\"";
-            string comando2 = "rmdir \"" + path + "\"";
-            system(comando1.c_str());
-            system(comando2.c_str());
-
-            std::ofstream outfile(path1);
-            outfile << codigo.c_str() << endl;
-            outfile.close();
-            string comando = "dot -Tpng " + path1 + " -o " + pathPng;
-            system(comando.c_str());
-        }
-    }
-    else
-    {
-        cout << "Error: nombre de reporte incorrecto." << endl;
-    }
+    return path;
 }
 
 void Interprete::fpause()
@@ -770,3 +564,407 @@ void Interprete::fpause()
     string respuesta;
     cin >> respuesta;
 }
+
+
+
+//------------------------------------------SEGUNDA FASE  - FILE SYSTEM ---------------------------------------------//
+
+void Interprete::fmkfs(vector<string> commandArray)
+{
+    string id = "";
+    string type = "";
+
+    for (int i = 0; i < commandArray.size(); i++)
+    {
+        string comando = Interprete::toLowerCase(commandArray[i].substr(1, 4));
+        string comando2 = Interprete::toLowerCase(commandArray[i].substr(1, 2));
+        if (comando == "type")
+        {
+            type = Interprete::toLowerCase(Interprete::getAtributo(commandArray[i]));
+        }
+        else if (comando2 == "id")
+        {
+            id = Interprete::toLowerCase(Interprete::getAtributo(commandArray[i]));
+        }
+    }
+
+    if(type == ""){
+        type = "full";
+    }
+
+    Mkfs fileSystem;
+    fileSystem.formatearFS(id, type, montaje);
+}
+
+
+//------------------------------------------- ARCHIVOS -----------------------------------//
+void Interprete::fmkfile(vector<string> commandArray)
+{
+    string path = "";
+    string size = "";
+    string cont = "";
+    string id = "";
+    int p = 0;
+
+    for (int i = 0; i < commandArray.size(); i++)
+    {
+        string comando = Interprete::toLowerCase(commandArray[i].substr(1, 4));
+        string comandoP = Interprete::toLowerCase(commandArray[i].substr(1, 1));
+        string comando2 = Interprete::toLowerCase(commandArray[i].substr(1, 2));
+        if (comando == "path")
+        {
+            if (commandArray[i].substr(7, 1) != "\"")
+            {
+                path = Interprete::getAtributo(commandArray[i]);
+            }
+            else
+            {
+                path = Interprete::getFullPath(commandArray, i);
+            }
+        }
+        else if (comando == "size")
+        {
+            size = Interprete::getAtributo(commandArray[i]);
+        }
+        else if (comando == "cont")
+        {
+            if (commandArray[i].substr(7, 1) != "\"")
+            {
+                cont = Interprete::getAtributo(commandArray[i]);
+            }
+            else
+            {
+                cont = Interprete::getFullPath(commandArray, i);
+            }
+        }
+        else if (comandoP == "p")
+        {
+            p = 1;
+        }
+        else if (comando2 == "id")
+        {
+            id = Interprete::toLowerCase(Interprete::getAtributo(commandArray[i]));
+        }
+    }
+
+    Archivo file;
+    file.makeFile(id, path, p, size, cont, montaje, false);
+}
+void Interprete::fcat(vector<string> commandArray)
+{
+    string path = "";
+
+    for (int i = 0; i < commandArray.size(); i++)
+    {
+        string comando = Interprete::toLowerCase(commandArray[i].substr(1, 4));
+        if (comando == "file")
+        {
+            if (commandArray[i].substr(7, 1) != "\"")
+            {
+                path = Interprete::getAtributo(commandArray[i]);
+            }
+            else
+            {
+                path = Interprete::getFullPath(commandArray, i);
+            }
+        }
+    }
+
+    Archivo file;
+    file.showContent(path);
+}
+void Interprete::frem(vector<string> commandArray)
+{
+    string path = "";
+
+    for (int i = 0; i < commandArray.size(); i++)
+    {
+        string comando = Interprete::toLowerCase(commandArray[i].substr(1, 4));
+        if (comando == "path")
+        {
+            if (commandArray[i].substr(7, 1) != "\"")
+            {
+                path = Interprete::getAtributo(commandArray[i]);
+            }
+            else
+            {
+                path = Interprete::getFullPath(commandArray, i);
+            }
+        }
+    }
+
+    Archivo file;
+    file.removeFile(path);
+}
+void Interprete::fedit(vector<string> commandArray)
+{
+    string path = "";
+    string cont = "";
+
+    for (int i = 0; i < commandArray.size(); i++)
+    {
+        string comando = Interprete::toLowerCase(commandArray[i].substr(1, 4));
+        if (comando == "path")
+        {
+            if (commandArray[i].substr(7, 1) != "\"")
+            {
+                path = Interprete::getAtributo(commandArray[i]);
+            }
+            else
+            {
+                path = Interprete::getFullPath(commandArray, i);
+            }
+        }
+        else if (comando == "cont")
+        {
+            cont = Interprete::getAtributo(commandArray[i]);
+        }
+    }
+
+    Archivo file;
+    file.editFile(path, cont);
+}
+
+//------------------------------------------- CARPETAS -----------------------------------//
+
+void Interprete::fren(vector<string> commandArray)
+{
+    string id = "";
+    string path = "";
+    string name = "";
+
+    for (int i = 0; i < commandArray.size(); i++)
+    {
+        string comando = Interprete::toLowerCase(commandArray[i].substr(1, 4));
+        string comando2 = Interprete::toLowerCase(commandArray[i].substr(1, 2));
+        if (comando == "path")
+        {
+            if (commandArray[i].substr(7, 1) != "\"")
+            {
+                path = Interprete::getAtributo(commandArray[i]);
+            }
+            else
+            {
+                path = Interprete::getFullPath(commandArray, i);
+            }
+        }
+        else if (comando == "name")
+        {
+            if (commandArray[i].substr(7, 1) != "\"")
+            {
+                name = Interprete::getAtributo(commandArray[i]);
+            }
+            else
+            {
+                name = Interprete::getFullPath(commandArray, i);
+            }
+        }
+        else if (comando2 == "id")
+        {
+            id = Interprete::toLowerCase(Interprete::getAtributo(commandArray[i]));
+        }
+    }
+
+    Carpeta directory;
+    directory.renameFile(id, path, name, montaje);
+}
+
+void Interprete::fmkdir(vector<string> commandArray)
+{
+    string path = "";
+    int p = 0;
+    string id = "";
+
+    for (int i = 0; i < commandArray.size(); i++)
+    {
+        string comando = Interprete::toLowerCase(commandArray[i].substr(1, 4));
+        string comandoP = Interprete::toLowerCase(commandArray[i].substr(1, 1));
+        string comando2 = Interprete::toLowerCase(commandArray[i].substr(1, 2));
+        if (comando == "path")
+        {
+            if (commandArray[i].substr(7, 1) != "\"")
+            {
+                path = Interprete::getAtributo(commandArray[i]);
+            }
+            else
+            {
+                path = Interprete::getFullPath(commandArray, i);
+            }
+        }
+        else if (comandoP == "p")
+        {
+            p = 1;
+        }
+        else if (comando2 == "id")
+        {
+            id = Interprete::toLowerCase(Interprete::getAtributo(commandArray[i]));
+        }
+    }
+
+    Carpeta directory;
+    directory.makeDirectory(path, p, id, montaje, false);
+}
+void Interprete::fcp(vector<string> commandArray)
+{
+    string path = "";
+    string dest = "";
+    string id = "";
+
+    for (int i = 0; i < commandArray.size(); i++)
+    {
+        string comando = Interprete::toLowerCase(commandArray[i].substr(1, 4));
+        string comando2 = Interprete::toLowerCase(commandArray[i].substr(1, 2));
+        string comando3 = Interprete::toLowerCase(commandArray[i].substr(1, 7));
+        if (comando == "path")
+        {
+            if (commandArray[i].substr(7, 1) != "\"")
+            {
+                path = Interprete::getAtributo(commandArray[i]);
+            }
+            else
+            {
+                path = Interprete::getFullPath(commandArray, i);
+            }
+        }
+        else if (comando3 == "destiny")
+        {
+            if (commandArray[i].substr(10, 1) != "\"")
+            {
+                dest = Interprete::getAtributo(commandArray[i]);
+            }
+            else
+            {
+                dest = Interprete::getFullDest(commandArray, i);
+            }
+        }
+        else if (comando2 == "id")
+        {
+            id = Interprete::toLowerCase(Interprete::getAtributo(commandArray[i]));
+        }
+    }
+
+    Carpeta directory;
+    directory.copyFile(path, dest, montaje, id);
+}
+void Interprete::fmv(vector<string> commandArray)
+{
+    string path = "";
+    string dest = "";
+
+    for (int i = 0; i < commandArray.size(); i++)
+    {
+        string comando = Interprete::toLowerCase(commandArray[i].substr(1, 4));
+        if (comando == "path")
+        {
+            if (commandArray[i].substr(7, 1) != "\"")
+            {
+                path = Interprete::getAtributo(commandArray[i]);
+            }
+            else
+            {
+                path = Interprete::getFullPath(commandArray, i);
+            }
+        }
+        else if (comando == "dest")
+        {
+            if (commandArray[i].substr(7, 1) != "\"")
+            {
+                dest = Interprete::getAtributo(commandArray[i]);
+            }
+            else
+            {
+                dest = Interprete::getFullPath(commandArray, i);
+            }
+        }
+    }
+
+    Carpeta directory;
+    directory.moveFile(path, dest, montaje);
+}
+void Interprete::ffind(vector<string> commandArray)
+{
+    string path = "";
+    string name = "";
+
+    for (int i = 0; i < commandArray.size(); i++)
+    {
+        string comando = Interprete::toLowerCase(commandArray[i].substr(1, 4));
+        if (comando == "path")
+        {
+            if (commandArray[i].substr(7, 1) != "\"")
+            {
+                path = Interprete::getAtributo(commandArray[i]);
+            }
+            else
+            {
+                path = Interprete::getFullPath(commandArray, i);
+            }
+        }
+        else if (comando == "name")
+        {
+            name = Interprete::getAtributo(commandArray[i]);
+        }
+    }
+
+    Carpeta directory;
+    directory.findFile(path, name, montaje);
+}
+
+void Interprete::frecovery(vector<string> commandArray)
+{
+    string id = "";
+
+    for (int i = 0; i < commandArray.size(); i++)
+    {
+        string comando = Interprete::toLowerCase(commandArray[i].substr(1, 2));
+        if (comando == "id")
+        {
+            id = Interprete::getAtributo(commandArray[i]);
+        }
+    }
+
+    Recovery fileSystem;
+    fileSystem.recoveryFS(id, montaje);
+}
+void Interprete::floss(vector<string> commandArray)
+{
+    string id = "";
+
+    for (int i = 0; i < commandArray.size(); i++)
+    {
+        string comando = Interprete::toLowerCase(commandArray[i].substr(1, 2));
+        if (comando == "id")
+        {
+            id = Interprete::getAtributo(commandArray[i]);
+        }
+    }
+
+    Recovery fileSystem;
+    fileSystem.simulateLoss(id, montaje);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
